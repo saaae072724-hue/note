@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#e96a8b">
+<title>お客様メモ</title>
+<style>
+  :root{
+    --rose:#e96a8b; --rose-dark:#d4527a; --bg:#fff5f8; --card:#ffffff;
+    --line:#f0d7e0; --text:#3a2d33; --muted:#9b8a91;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;font-family:-apple-system,"Hiragino Sans","Yu Gothic UI",sans-serif;
+    background:var(--bg);color:var(--text);font-size:16px;line-height:1.6;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 0 100px;min-height:100vh;}
+  header{position:sticky;top:0;z-index:10;background:var(--rose);color:#fff;
+    padding:14px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  header h1{font-size:18px;margin:0;font-weight:700;}
+  header .htools{display:flex;gap:6px;}
+  header .menu{font-size:13px;color:#fff;background:rgba(255,255,255,.22);
+    border:none;border-radius:20px;padding:8px 12px;font-weight:600;}
+  .search{padding:14px 16px 6px;}
+  .search input{width:100%;padding:13px 16px;border:1.5px solid var(--line);
+    border-radius:14px;font-size:16px;background:#fff;}
+  .list{padding:8px 16px;}
+  .ccard{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(214,82,122,.06);}
+  .ccard .top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .ccard .name{font-size:18px;font-weight:700;}
+  .badge{font-size:12px;font-weight:700;color:#fff;background:var(--rose);
+    border-radius:20px;padding:3px 11px;white-space:nowrap;}
+  .badge.dim{background:#c9b9bf;}
+  .ccard .sub{color:var(--muted);font-size:13px;margin-top:4px;}
+  .ccard .next{margin-top:8px;font-size:14px;color:var(--rose-dark);}
+  .empty{text-align:center;color:var(--muted);padding:50px 20px;}
+  .fab{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:20;
+    background:var(--rose);color:#fff;border:none;border-radius:30px;
+    padding:16px 30px;font-size:17px;font-weight:700;box-shadow:0 6px 18px rgba(214,82,122,.45);}
+  .fab:active{background:var(--rose-dark);}
+  /* editor */
+  .editor{position:fixed;inset:0;background:var(--bg);z-index:50;overflow-y:auto;display:none;}
+  .editor.show{display:block;}
+  .ed-head{position:sticky;top:0;background:var(--rose);color:#fff;
+    padding:14px 16px;display:flex;justify-content:space-between;align-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  .ed-head button{background:rgba(255,255,255,.22);color:#fff;border:none;
+    border-radius:20px;padding:9px 16px;font-size:15px;font-weight:700;}
+  .ed-head .save{background:#fff;color:var(--rose-dark);}
+  .ed-body{max-width:560px;margin:0 auto;padding:16px 16px 60px;}
+  .genbtn{width:100%;background:var(--rose);color:#fff;border:none;border-radius:12px;
+    padding:13px;font-weight:700;font-size:15px;margin-bottom:14px;}
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px;}
+  .field input,.field textarea,.field select{width:100%;padding:12px 14px;
+    border:1.5px solid var(--line);border-radius:12px;font-size:16px;background:#fff;font-family:inherit;}
+  .field textarea{min-height:60px;resize:vertical;}
+  /* tag chips */
+  .section-title{font-size:14px;font-weight:700;color:var(--rose-dark);
+    margin:6px 0 10px;padding-left:4px;}
+  .taggroup{background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:12px 12px 4px;margin-bottom:16px;}
+  .tagrow{margin-bottom:12px;}
+  .tagrow .lbl{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{background:#fff;border:1.5px solid var(--line);color:var(--text);
+    border-radius:18px;padding:7px 14px;font-size:14px;font-weight:600;line-height:1;}
+  .chip.on{background:var(--rose);color:#fff;border-color:var(--rose);}
+  /* visits */
+  .visitstat{font-size:13px;color:var(--rose-dark);font-weight:700;margin:-2px 0 8px;}
+  .logbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;}
+  .logitem{display:flex;align-items:center;gap:8px;border-bottom:1px dashed var(--line);padding:8px 4px;font-size:14px;flex-wrap:wrap;}
+  .logitem:last-child{border-bottom:none;}
+  .logitem .d{color:var(--rose-dark);font-weight:700;font-size:12px;white-space:nowrap;}
+  .logitem .vshi{font-size:11px;background:var(--rose);color:#fff;border-radius:20px;padding:2px 8px;white-space:nowrap;}
+  .logitem .t{flex:1;min-width:120px;}
+  .logitem .x{color:#caa;font-weight:700;padding:0 4px;}
+  .addvisit{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .addvisit input[type=date]{width:145px;}
+  .addvisit select{width:160px;padding:12px 10px;border:1.5px solid var(--line);
+    border-radius:12px;font-size:15px;background:#fff;}
+  .addvisit input[type=text]{flex:1;min-width:120px;}
+  .addvisit button{background:var(--rose);color:#fff;border:none;border-radius:12px;
+    padding:0 18px;font-weight:700;font-size:15px;}
+  .del{width:100%;margin-top:14px;background:#fff;color:#d23b3b;
+    border:1.5px solid #f1c4c4;border-radius:12px;padding:13px;font-weight:700;font-size:15px;}
+  /* sheet */
+  .sheet{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:60;display:none;align-items:flex-end;}
+  .sheet.show{display:flex;}
+  .sheet .inner{background:#fff;width:100%;max-width:560px;margin:0 auto;
+    border-radius:20px 20px 0 0;padding:10px 16px 30px;}
+  .sheet h3{text-align:center;color:var(--muted);font-size:14px;margin:14px 0;}
+  .sheet button{width:100%;padding:15px;border:none;background:var(--bg);
+    border-radius:12px;font-size:16px;font-weight:600;margin-bottom:10px;color:var(--text);}
+  .sheet .close{background:#fff;color:var(--muted);}
+  .hint{font-size:12px;color:var(--muted);text-align:center;margin-top:4px;}
+  /* generator */
+  .gen{position:fixed;inset:0;background:var(--bg);z-index:55;overflow-y:auto;display:none;}
+  .gen.show{display:block;}
+  .gen-head{position:sticky;top:0;background:var(--rose);color:#fff;
+    padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  .gen-head button{background:rgba(255,255,255,.22);color:#fff;border:none;
+    border-radius:20px;padding:9px 14px;font-size:14px;font-weight:700;}
+  .gen-head .title{font-weight:700;font-size:15px;}
+  .gen-body{max-width:560px;margin:0 auto;padding:16px 16px 60px;}
+  .gen-target{background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:10px 14px;margin-bottom:14px;font-size:14px;color:var(--rose-dark);font-weight:700;text-align:center;}
+  .tabs{display:flex;background:#fff;border:1.5px solid var(--line);border-radius:14px;
+    padding:4px;margin-bottom:16px;}
+  .tabs button{flex:1;border:none;background:transparent;padding:11px;font-size:15px;
+    font-weight:700;color:var(--muted);border-radius:10px;}
+  .tabs button.active{background:var(--rose);color:#fff;}
+  .gen-card{background:#fff;border:1px solid var(--line);border-radius:16px;
+    padding:14px;margin-bottom:14px;}
+  .gen-card h4{margin:0 0 8px;font-size:14px;color:var(--muted);font-weight:700;}
+  .gen-text{background:var(--bg);border-radius:10px;padding:12px;font-size:15px;
+    line-height:1.9;white-space:pre-wrap;min-height:60px;}
+  .gen-actions{display:flex;gap:10px;margin-top:10px;}
+  .gen-actions button{flex:1;background:var(--rose);color:#fff;border:none;
+    border-radius:12px;padding:12px;font-weight:700;font-size:14px;}
+  .gen-actions button.sub{background:#fff;color:var(--rose-dark);border:1.5px solid var(--line);}
+  .reply-loading,.reply-hint,.reply-err{background:#fff;border:1px solid var(--line);
+    border-radius:12px;padding:18px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7;}
+  .reply-err{color:#d23b3b;border-color:#f1c4c4;background:#fff6f6;}
+  .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+    background:rgba(50,30,40,.92);color:#fff;padding:10px 20px;border-radius:20px;
+    font-size:14px;z-index:100;opacity:0;transition:opacity .25s;pointer-events:none;}
+  .toast.show{opacity:1;}
+  /* view toggle */
+  .viewtabs{display:flex;gap:6px;padding:12px 16px 4px;}
+  .viewtabs button{flex:1;border:1.5px solid var(--line);background:#fff;color:var(--muted);
+    border-radius:12px;padding:11px;font-weight:700;font-size:15px;}
+  .viewtabs button.active{background:var(--rose);color:#fff;border-color:var(--rose);}
+  /* calendar */
+  .cal{padding:6px 12px;}
+  .calnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
+  .calnav button{background:#fff;border:1.5px solid var(--line);border-radius:10px;
+    padding:9px 14px;font-weight:700;color:var(--rose-dark);font-size:15px;}
+  .calnav .m{font-size:17px;font-weight:700;}
+  .calsum{text-align:center;font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:8px;}
+  .callegend{display:flex;justify-content:center;gap:14px;font-size:11px;color:var(--muted);margin-bottom:8px;}
+  .callegend span{display:inline-flex;align-items:center;gap:4px;}
+  .callegend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+  .caldow{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding:2px 0 4px;}
+  .caldow.sun{color:#d23b3b;} .caldow.sat{color:#4a78c4;}
+  .calcell{min-height:62px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:3px;overflow:hidden;}
+  .calcell.blank{background:transparent;border:none;}
+  .calcell.today{border-color:var(--rose);box-shadow:0 0 0 1.5px var(--rose);}
+  .calcell .dn{font-size:11px;font-weight:700;color:var(--muted);line-height:1.3;}
+  .calcell.sun .dn{color:#d23b3b;} .calcell.sat .dn{color:#4a78c4;}
+  .calv{display:block;width:100%;font-size:10px;font-weight:700;color:#fff;background:var(--rose);
+    border-radius:5px;padding:2px 4px;margin-top:2px;text-align:left;border:none;line-height:1.35;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .calv.net{background:#c9a2b4;} .calv.unk{background:#d8ccd1;color:#6b5c63;}
+  .calmore{font-size:9px;color:var(--muted);padding-left:2px;}
+  .calempty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>💗 お客様メモ</h1>
+    <div class="htools">
+      <button class="menu" onclick="openGen()">📝 台本</button>
+      <button class="menu" onclick="openSheet()">💾</button>
+    </div>
+  </header>
+  <div class="viewtabs">
+    <button id="tabList" class="active" onclick="setView('list')">📋 リスト</button>
+    <button id="tabCal" onclick="setView('cal')">📅 カレンダー</button>
+  </div>
+  <div id="searchWrap" class="search">
+    <input id="search" placeholder="🔍 名前で検索" oninput="render()">
+  </div>
+  <div class="list" id="list"></div>
+
+  <div class="cal" id="cal" style="display:none">
+    <div class="calnav">
+      <button onclick="calMove(-1)">‹ 前</button>
+      <span class="m" id="calMonth"></span>
+      <button onclick="calMove(1)">次 ›</button>
+    </div>
+    <div class="calsum" id="calSum"></div>
+    <div class="callegend">
+      <span><i style="background:#e96a8b"></i>本指名</span>
+      <span><i style="background:#c9a2b4"></i>新規・ネット系</span>
+    </div>
+    <div class="calgrid" id="calDow"></div>
+    <div class="calgrid" id="calGrid"></div>
+    <div style="text-align:center;margin-top:12px">
+      <button onclick="calToday()" style="background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:9px 20px;font-weight:700;color:var(--rose-dark);font-size:14px">今日にもどる</button>
+    </div>
+  </div>
+</div>
+
+<button class="fab" onclick="openEditor()">＋ 新しいお客様</button>
+
+<!-- 編集画面 -->
+<div class="editor" id="editor">
+  <div class="ed-head">
+    <button onclick="closeEditor()">← もどる</button>
+    <button class="save" onclick="saveCustomer()">保存</button>
+  </div>
+  <div class="ed-body">
+    <button class="genbtn" onclick="openGenForCurrent()">📝 この子に合わせて台本を作る</button>
+    <button class="genbtn" style="background:#fff;color:var(--rose-dark);border:1.5px solid var(--line)" onclick="openReplyForCurrent()">💬 この子への返信案を作る（AI）</button>
+    <input type="hidden" id="f_id">
+    <div class="field">
+      <label>呼び名（ニックネーム推奨）</label>
+      <input id="f_name" placeholder="例：ヒロ君">
+    </div>
+
+    <div class="section-title">🏷️ 基本情報（タップで選択／もう一度タップで解除）</div>
+    <div class="taggroup" id="tagbox"></div>
+
+    <div class="field">
+      <label>来店記録（日付＋指名方法＋メモを毎回残す）</label>
+      <div class="visitstat" id="visitstat"></div>
+      <div class="logbox" id="visitbox"></div>
+      <div class="addvisit">
+        <input type="date" id="newdate">
+        <select id="newshimei">
+          <option value="">指名方法</option>
+          <option>本指名</option>
+          <option>ネット前日指名</option>
+          <option>ハピスク指名</option>
+          <option>ネット当日指名</option>
+          <option>ヒメネット</option>
+          <option>写真指名</option>
+        </select>
+        <input type="text" id="newmemo" placeholder="メモ（任意）">
+        <button onclick="addVisit()">追加</button>
+      </div>
+      <p class="hint" style="text-align:left">「追加」で1回分を記録。回数・初回・最終来店日は自動計算。</p>
+    </div>
+
+    <div class="section-title">📝 自由メモ</div>
+    <div class="field"><label>特徴・見た目（タグにない印象など）</label><input id="f_look" placeholder="例：笑顔が優しい・話し方ゆっくり"></div>
+    <div class="field"><label>好きな話題</label><input id="f_likes" placeholder="例：サウナ・猫"></div>
+    <div class="field"><label>NG・注意点</label><input id="f_ng" placeholder="例：政治の話はNG"></div>
+    <div class="field"><label>お酒の好み（具体的に）</label><input id="f_drink" placeholder="例：ハイボール"></div>
+    <div class="field"><label>差し入れ・プレゼント（具体的に）</label><input id="f_gift" placeholder="例：限定タオル(5月)"></div>
+    <div class="field"><label>次回の話題メモ</label><textarea id="f_next" placeholder="次に話したいこと"></textarea></div>
+
+    <button class="del" onclick="deleteCustomer()">このお客様を削除</button>
+  </div>
+</div>
+
+<!-- 台本ジェネレーター -->
+<div class="gen" id="gen">
+  <div class="gen-head">
+    <button onclick="closeGen()">← もどる</button>
+    <span class="title">📝 お礼動画の台本</span>
+    <button onclick="regenAll()">🔄 別案</button>
+  </div>
+  <div class="gen-body">
+    <div class="gen-target" id="genTarget"></div>
+    <div class="tabs">
+      <button id="tabShort" class="active" onclick="setLen('short')">一言ver</button>
+      <button id="tabFull" onclick="setLen('full')">ふつうver</button>
+    </div>
+    <div class="gen-card">
+      <h4>🎥 動画でしゃべる台本</h4>
+      <div class="gen-text" id="genScript"></div>
+      <div class="gen-actions">
+        <button onclick="copyText('genScript')">コピー</button>
+        <button class="sub" onclick="regenScript()">別の言い方</button>
+      </div>
+    </div>
+    <div class="gen-card">
+      <h4>📔 写メ日記の投稿文</h4>
+      <div class="gen-text" id="genCaption"></div>
+      <div class="gen-actions">
+        <button onclick="copyText('genCaption')">コピー</button>
+        <button class="sub" onclick="regenCaption()">別の言い方</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 返信案メーカー（AI） -->
+<div class="gen" id="reply">
+  <div class="gen-head">
+    <button onclick="closeReply()">← もどる</button>
+    <span class="title">💬 返信案（AI）</span>
+    <span style="width:64px"></span>
+  </div>
+  <div class="gen-body">
+    <div class="gen-target" id="replyTarget"></div>
+    <div class="field">
+      <label>お客様から来たメッセージ（トークからコピーして貼る）</label>
+      <textarea id="replyMsg" style="min-height:90px" placeholder="例：今日はありがとう！また行くね"></textarea>
+    </div>
+    <button class="genbtn" id="replyGoBtn" onclick="genReplies()">✨ 返信案を3つ作る</button>
+    <div id="replyOut"></div>
+  </div>
+</div>
+
+<!-- バックアップ用シート -->
+<div class="sheet" id="sheet">
+  <div class="inner">
+    <h3>☁️ スマホとPCを同期する</h3>
+    <button onclick="setupSync()">🔗 同期をセットアップ／キー設定</button>
+    <button onclick="syncNow(true)">🔄 今すぐ同期</button>
+    <p class="hint" id="syncStat">未設定</p>
+    <h3 style="margin-top:20px">バックアップ（データを守る）</h3>
+    <button onclick="exportData()">📤 データを書き出す（保存）</button>
+    <p class="hint">ファイルをGoogleドライブ等に保存しておくと安心</p>
+    <button onclick="document.getElementById('importFile').click()">📥 データを読み込む（復元）</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    <button onclick="setApiKey()">🔑 AIキー設定（任意・返信案AI用）</button>
+    <p class="hint">自分のAIキーを入れた人だけAI返信が使えます（データはこの端末だけに保存）</p>
+    <button class="close" onclick="closeSheet()">閉じる</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY='himeCustomers';
+const SHIMEI=['本指名','ネット前日指名','ハピスク指名','ネット当日指名','ヒメネット','写真指名'];
+
+// ===== タグ定義（あとから自由に増減できる） =====
+const TAGS=[
+  {id:'glass',  label:'眼鏡',         opts:['あり','なし']},
+  {id:'marri',  label:'結婚',         opts:['未婚','既婚','不明']},
+  {id:'partner',label:'お付き合い',    opts:['いる','いない','不明']},
+  {id:'smoke',  label:'喫煙',         opts:['喫煙','非喫煙','不明']},
+  {id:'play',   label:'スタイル希望',  opts:['マット','ベッド','どちらも']},
+  {id:'size',   label:'サイズ',       opts:['SS','S','M','L','XL']},
+  {id:'age',    label:'年代',         opts:['20代','30代','40代','50代','60代+']},
+  {id:'build',  label:'体型',         opts:['細身','普通','がっしり','ぽっちゃり']},
+  {id:'clean',  label:'清潔感',       opts:['◎','○','△']},
+  {id:'talk',   label:'会話量',       opts:['多め','普通','少なめ']},
+  {id:'drink',  label:'お酒',         opts:['飲む','たまに','飲まない']}
+];
+
+let data=migrate(load());
+let curVisits=[];
+let curTags={};
+
+function load(){
+  try{const d=JSON.parse(localStorage.getItem(KEY));return Array.isArray(d)?d:seed();}
+  catch(e){return seed();}
+}
+function seed(){
+  return [
+    {id:id(),name:'ヒロ君(見本)',
+     tags:{glass:'あり',marri:'既婚',partner:'いない',smoke:'非喫煙',play:'マット',size:'M',age:'30代',build:'普通',clean:'◎',talk:'多め',drink:'飲む'},
+     look:'笑顔が優しい・話し方ゆっくり',likes:'サウナ・猫',ng:'政治の話はNG',drink:'ハイボール',
+     gift:'限定タオル(5月)',next:'新作サ活レポ／猫の写真を見せてもらう',
+     visits:[
+       {date:'2026-05-20',shimei:'本指名',memo:'サウナ新店の話で盛り上がった。次は一緒に行きたいと'},
+       {date:'2026-04-18',shimei:'本指名',memo:''},
+       {date:'2026-03-02',shimei:'ネット前日指名',memo:'誕生日が近いと言っていた(4月)'},
+       {date:'2026-01-15',shimei:'写真指名',memo:'初回。緊張気味、優しくリードした'}
+     ]}
+  ];
+}
+function migrate(arr){
+  let changed=false;
+  arr.forEach(c=>{
+    // 旧 logs → visits
+    if(!Array.isArray(c.visits)){
+      let v=Array.isArray(c.logs)?c.logs.map(l=>({date:l.date,memo:l.text||''})):[];
+      if(v.length===0){
+        if(c.last) v.push({date:c.last,memo:''});
+        if(c.first && c.first!==c.last) v.push({date:c.first,memo:''});
+      }
+      c.visits=v; delete c.logs; delete c.count; delete c.first; delete c.last;
+      changed=true;
+    }
+    // 旧 customer.shimei → 各 visit.shimei にコピー
+    if(c.shimei){
+      c.visits.forEach(v=>{if(!v.shimei) v.shimei=c.shimei;});
+      delete c.shimei; changed=true;
+    }
+    // tags の空オブジェクト保証
+    if(!c.tags){c.tags={};changed=true;}
+  });
+  if(changed) localStorage.setItem(KEY,JSON.stringify(arr));
+  return arr;
+}
+function saveLocal(){localStorage.setItem(KEY,JSON.stringify(data));}
+function save(){saveLocal();scheduleSync();}
+function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function esc(s){return(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+function vcount(c){return (c.visits||[]).length;}
+function vdates(c){return (c.visits||[]).map(v=>v.date).filter(Boolean).sort();}
+function vlast(c){const d=vdates(c);return d.length?d[d.length-1]:'';}
+function vlastShimei(c){
+  const sorted=[...(c.visits||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  return (sorted[0]||{}).shimei||'';
+}
+
+// ===== 表示モード（リスト / カレンダー） =====
+let viewMode=localStorage.getItem('himeView')||'list';
+let calRef=null; // {y,m(0-11)}
+
+function setView(mode){
+  viewMode=mode;
+  localStorage.setItem('himeView',mode);
+  document.getElementById('tabList').classList.toggle('active',mode==='list');
+  document.getElementById('tabCal').classList.toggle('active',mode==='cal');
+  const on=(el,show)=>document.getElementById(el).style.display=show?'':'none';
+  on('searchWrap',mode==='list');
+  on('list',mode==='list');
+  on('cal',mode==='cal');
+  render();
+}
+
+function render(){
+  if(viewMode==='cal') renderCal();
+  else renderList();
+}
+
+function renderList(){
+  const q=document.getElementById('search').value.trim();
+  const list=document.getElementById('list');
+  let rows=[...data].sort((a,b)=>vlast(b).localeCompare(vlast(a)));
+  if(q) rows=rows.filter(c=>(c.name||'').includes(q));
+  if(rows.length===0){
+    list.innerHTML='<div class="empty">'+(q?'見つかりませんでした':'まだお客様がいません。<br>右下の「＋」から追加してね')+'</div>';
+    return;
+  }
+  list.innerHTML=rows.map(c=>{
+    const sh=vlastShimei(c);
+    return `<div class="ccard" onclick="openEditor('${c.id}')">
+      <div class="top"><span class="name">${esc(c.name)||'(名前なし)'}</span>
+        <span class="badge ${sh?'':'dim'}">${sh?esc(sh):'—'}</span></div>
+      <div class="sub">来店${vcount(c)}回 ・ 最終 ${vlast(c)||'—'}</div>
+      ${c.next?`<div class="next">📝 次回：${esc(c.next)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ===== カレンダー表示 =====
+const CAL_DOW=['日','月','火','水','木','金','土'];
+function shimeiClass(sh){ return sh==='本指名' ? '' : (sh ? 'net' : 'unk'); }
+
+function calMove(delta){
+  if(!calRef){const d=new Date();calRef={y:d.getFullYear(),m:d.getMonth()};}
+  let m=calRef.m+delta, y=calRef.y;
+  if(m<0){m=11;y--;} if(m>11){m=0;y++;}
+  calRef={y,m}; renderCal();
+}
+function calToday(){const d=new Date();calRef={y:d.getFullYear(),m:d.getMonth()};renderCal();}
+
+function renderCal(){
+  if(!calRef){const d=new Date();calRef={y:d.getFullYear(),m:d.getMonth()};}
+  const {y,m}=calRef;
+  document.getElementById('calMonth').textContent=`${y}年 ${m+1}月`;
+
+  // 曜日ヘッダ
+  document.getElementById('calDow').innerHTML=CAL_DOW.map((d,i)=>
+    `<div class="caldow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');
+
+  // この月の来店を日付ごとに集計
+  const byDay={}; let honshi=0, other=0;
+  data.forEach(c=>{(c.visits||[]).forEach(v=>{
+    if(!v.date) return;
+    const p=v.date.split('-').map(Number);
+    if(p[0]===y && p[1]===m+1){
+      (byDay[p[2]]=byDay[p[2]]||[]).push({cid:c.id,name:c.name||'(名前なし)',shimei:v.shimei||''});
+      if(v.shimei==='本指名') honshi++; else other++;
+    }
+  });});
+  document.getElementById('calSum').textContent=
+    (honshi+other)? `合計 ${honshi+other}回 　本指名 ${honshi} ／ 新規・ネット系 ${other}`
+                  : 'この月の来店記録はまだありません';
+
+  // グリッド生成
+  const first=new Date(y,m,1).getDay();
+  const days=new Date(y,m+1,0).getDate();
+  const now=new Date();
+  const isThisMonth=(now.getFullYear()===y && now.getMonth()===m);
+  let cells='';
+  for(let i=0;i<first;i++) cells+='<div class="calcell blank"></div>';
+  for(let d=1;d<=days;d++){
+    const dow=(first+d-1)%7;
+    const cls=[dow===0?'sun':dow===6?'sat':'', isThisMonth&&now.getDate()===d?'today':''].filter(Boolean).join(' ');
+    const vs=byDay[d]||[];
+    const shown=vs.slice(0,3).map(v=>
+      `<button class="calv ${shimeiClass(v.shimei)}" onclick="openEditor('${v.cid}')">${esc(v.name)}</button>`).join('');
+    const more=vs.length>3?`<div class="calmore">+${vs.length-3}人</div>`:'';
+    cells+=`<div class="calcell ${cls}"><div class="dn">${d}</div>${shown}${more}</div>`;
+  }
+  document.getElementById('calGrid').innerHTML=cells;
+}
+
+function openEditor(cid){
+  const c=cid?data.find(x=>x.id===cid):null;
+  document.getElementById('f_id').value=c?c.id:'';
+  const g=id=>document.getElementById(id);
+  g('f_name').value=c?.name||'';
+  g('f_look').value=c?.look||''; g('f_likes').value=c?.likes||''; g('f_ng').value=c?.ng||'';
+  g('f_drink').value=c?.drink||''; g('f_gift').value=c?.gift||''; g('f_next').value=c?.next||'';
+  curVisits=c?JSON.parse(JSON.stringify(c.visits||[])):[];
+  curTags=c?JSON.parse(JSON.stringify(c.tags||{})):{};
+  g('newdate').value=today(); g('newmemo').value=''; g('newshimei').value='';
+  renderTags();
+  renderVisits();
+  document.getElementById('editor').classList.add('show');
+  window.scrollTo(0,0);
+}
+function closeEditor(){document.getElementById('editor').classList.remove('show');}
+
+function renderTags(){
+  const box=document.getElementById('tagbox');
+  box.innerHTML=TAGS.map(t=>{
+    const cur=curTags[t.id]||'';
+    return `<div class="tagrow"><span class="lbl">${t.label}</span>
+      <div class="chips">${t.opts.map(o=>
+        `<button type="button" class="chip ${o===cur?'on':''}" data-tag="${t.id}" data-val="${esc(o)}" onclick="toggleTag(this)">${esc(o)}</button>`
+      ).join('')}</div></div>`;
+  }).join('');
+}
+function toggleTag(btn){
+  const tagId=btn.dataset.tag, val=btn.dataset.val;
+  if(curTags[tagId]===val){ delete curTags[tagId]; }
+  else { curTags[tagId]=val; }
+  document.querySelectorAll(`.chip[data-tag="${tagId}"]`).forEach(b=>{
+    b.classList.toggle('on', b.dataset.val===curTags[tagId]);
+  });
+}
+
+function renderVisits(){
+  const box=document.getElementById('visitbox');
+  const sorted=[...curVisits].map((v,i)=>({v,i})).sort((a,b)=>(b.v.date||'').localeCompare(a.v.date||''));
+  const dates=curVisits.map(v=>v.date).filter(Boolean).sort();
+  const stat=document.getElementById('visitstat');
+  stat.textContent= dates.length ? `来店 ${dates.length}回 ／ 初回 ${dates[0]} ／ 最終 ${dates[dates.length-1]}` : '来店記録はまだありません';
+  if(curVisits.length===0){box.innerHTML='<div style="color:#9b8a91;font-size:13px">下の欄から来店日を追加</div>';return;}
+  box.innerHTML=sorted.map(o=>`<div class="logitem">
+      <span class="d">${o.v.date||'日付なし'}</span>
+      ${o.v.shimei?`<span class="vshi">${esc(o.v.shimei)}</span>`:''}
+      <span class="t">${esc(o.v.memo||'')}</span>
+      <span class="x" onclick="delVisit(${o.i})">✕</span>
+    </div>`).join('');
+}
+function addVisit(){
+  const d=document.getElementById('newdate').value;
+  const sh=document.getElementById('newshimei').value;
+  const m=document.getElementById('newmemo').value.trim();
+  if(!d){alert('日付を選んでください');return;}
+  curVisits.push({date:d,shimei:sh,memo:m});
+  document.getElementById('newmemo').value='';
+  document.getElementById('newshimei').value='';
+  renderVisits();
+}
+function delVisit(i){curVisits.splice(i,1);renderVisits();}
+
+function saveCustomer(){
+  const g=id=>document.getElementById(id).value;
+  const cid=g('f_id');
+  const obj={id:cid||id(),name:g('f_name'),tags:curTags,
+    look:g('f_look'),likes:g('f_likes'),ng:g('f_ng'),
+    drink:g('f_drink'),gift:g('f_gift'),next:g('f_next'),visits:curVisits,
+    updatedAt:Date.now()};
+  if(!obj.name.trim()){alert('呼び名を入れてください');return;}
+  const del=loadDeleted(); if(del[obj.id]){delete del[obj.id];saveDeleted(del);} // 復活したら墓標を消す
+  if(cid){const i=data.findIndex(x=>x.id===cid);data[i]=obj;}else{data.push(obj);}
+  save();render();closeEditor();
+}
+function deleteCustomer(){
+  const cid=document.getElementById('f_id').value;
+  if(!cid){closeEditor();return;}
+  if(!confirm('このお客様を削除しますか？')) return;
+  const del=loadDeleted(); del[cid]=Date.now(); saveDeleted(del); // 墓標（他の端末にも削除を伝える）
+  data=data.filter(x=>x.id!==cid);save();render();closeEditor();
+}
+
+function openSheet(){document.getElementById('sheet').classList.add('show');updateSyncStat();}
+function closeSheet(){document.getElementById('sheet').classList.remove('show');}
+function exportData(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  const d=new Date();a.download='okyakusama-backup-'+d.getFullYear()+(d.getMonth()+1)+d.getDate()+'.json';
+  a.click();closeSheet();
+}
+function importData(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(Array.isArray(d)){
+    if(confirm('今のデータを読み込んだデータで置きかえます。よろしいですか？')){data=migrate(d);save();render();closeSheet();}
+  }else alert('正しいバックアップファイルではありません');}catch(err){alert('読み込めませんでした');}};
+  r.readAsText(f);
+}
+
+// ====== ☁️ スマホ⇔PC 自動同期（GitHub Gist・非公開） ======
+// 同じ「キー」をスマホとPCの両方に貼れば、自動で同じ非公開スペースにつながって同期される。
+const GIST_FILE='hime-customers.json';
+let syncing=false, syncTimer=null;
+
+function ghToken(){return (localStorage.getItem('ghToken')||'').trim();}
+function loadDeleted(){try{return JSON.parse(localStorage.getItem('himeDeleted'))||{};}catch(e){return {};}}
+function saveDeleted(d){localStorage.setItem('himeDeleted',JSON.stringify(d||{}));}
+
+async function ghFetch(url,opt){
+  opt=opt||{};
+  opt.headers=Object.assign({
+    'Authorization':'token '+ghToken(),
+    'Accept':'application/vnd.github+json'
+  },opt.headers||{});
+  const res=await fetch(url,opt);
+  if(!res.ok){const t=await res.text();throw new Error('GitHub '+res.status+' '+t.slice(0,120));}
+  return res;
+}
+// 同じキーの端末が同じGistに集まるよう、無ければ探す→無ければ作る
+async function ensureGist(){
+  let gid=localStorage.getItem('ghGistId');
+  if(gid) return gid;
+  const list=await (await ghFetch('https://api.github.com/gists?per_page=100')).json();
+  const found=(list||[]).find(g=>g.files && g.files[GIST_FILE]);
+  if(found){gid=found.id;}
+  else{
+    const body={description:'HIME顧客メモ同期（非公開）',public:false,
+      files:{[GIST_FILE]:{content:JSON.stringify({customers:data,deletedIds:loadDeleted(),savedAt:Date.now()},null,2)}}};
+    const j=await (await ghFetch('https://api.github.com/gists',{method:'POST',body:JSON.stringify(body)})).json();
+    gid=j.id;
+  }
+  localStorage.setItem('ghGistId',gid);
+  return gid;
+}
+async function pullRemote(){
+  const gid=await ensureGist();
+  const j=await (await ghFetch('https://api.github.com/gists/'+gid)).json();
+  const f=j.files && j.files[GIST_FILE];
+  if(!f) return {customers:[],deletedIds:{}};
+  let content=f.content;
+  if(f.truncated && f.raw_url){content=await (await fetch(f.raw_url)).text();}
+  try{const o=JSON.parse(content);return {customers:o.customers||[],deletedIds:o.deletedIds||{}};}
+  catch(e){return {customers:[],deletedIds:{}};}
+}
+async function pushRemote(customers,deletedIds){
+  const gid=await ensureGist();
+  const body={files:{[GIST_FILE]:{content:JSON.stringify({customers,deletedIds,savedAt:Date.now()},null,2)}}};
+  await ghFetch('https://api.github.com/gists/'+gid,{method:'PATCH',body:JSON.stringify(body)});
+}
+// 端末をまたいで「新しい方を残す」マージ（更新時刻で判定・削除も反映）
+function mergeCustomers(localArr,remoteArr,localDel,remoteDel){
+  const delMap={};
+  [localDel,remoteDel].forEach(d=>{for(const k in (d||{})){delMap[k]=Math.max(delMap[k]||0,d[k]||0);}});
+  const byId={};
+  [remoteArr,localArr].forEach(arr=>{(arr||[]).forEach(c=>{
+    if(!c||!c.id) return;
+    const ex=byId[c.id];
+    if(!ex||(c.updatedAt||0)>=(ex.updatedAt||0)) byId[c.id]=c;
+  });});
+  const out=[];
+  for(const k in byId){
+    const c=byId[k];
+    if(delMap[k] && delMap[k]>=(c.updatedAt||0)) continue; // 編集より後に消された→消す
+    out.push(c);
+  }
+  const cutoff=Date.now()-90*864e5; // 90日より古い墓標は掃除
+  for(const k in delMap){if(delMap[k]<cutoff) delete delMap[k];}
+  return {customers:out,deletedIds:delMap};
+}
+async function syncNow(manual){
+  if(!ghToken()){if(manual) showToast('先に「同期をセットアップ」してね');return;}
+  if(syncing) return;
+  syncing=true; if(manual) showToast('同期中…☁️');
+  try{
+    const remote=await pullRemote();
+    const merged=mergeCustomers(data,remote.customers,loadDeleted(),remote.deletedIds);
+    data=merged.customers; saveLocal(); saveDeleted(merged.deletedIds);
+    await pushRemote(merged.customers,merged.deletedIds);
+    localStorage.setItem('syncLastAt',String(Date.now()));
+    render(); updateSyncStat();
+    if(manual) showToast('同期できたよ☁️✨');
+  }catch(e){
+    if(manual) showToast('同期に失敗…ネットとキーを確認してね');
+    console.warn(e);
+  }finally{syncing=false;}
+}
+function scheduleSync(){ // 保存のたびに少し待ってまとめて同期
+  if(!ghToken()) return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>syncNow(false),1500);
+}
+async function setupSync(){
+  const cur=ghToken();
+  const t=prompt('スマホとPCを同期するための「キー」を貼ってね。\nGitHubの Personal access token（ghp_ か github_pat_ で始まる長い文字列）。\n★スマホとPCで“同じキー”を貼れば自動で同期されます。\n空欄＋OK で同期オフ。',cur);
+  if(t===null) return;
+  const tok=t.trim();
+  if(tok===''){localStorage.removeItem('ghToken');localStorage.removeItem('ghGistId');showToast('同期をオフにしたよ');updateSyncStat();return;}
+  localStorage.setItem('ghToken',tok);
+  localStorage.removeItem('ghGistId'); // つなぎ直し
+  showToast('つないでいます…☁️');
+  try{await ensureGist();await syncNow(true);}
+  catch(e){showToast('つながらなかった…キーを確認してね');console.warn(e);}
+  updateSyncStat();
+}
+function updateSyncStat(){
+  const el=document.getElementById('syncStat'); if(!el) return;
+  if(!ghToken()){el.textContent='いまは同期オフ（この端末だけに保存）';return;}
+  const t=Number(localStorage.getItem('syncLastAt')||0);
+  el.textContent= t ? ('✅ 同期オン ・ 最終同期 '+new Date(t).toLocaleString('ja-JP')) : '同期オン（まだ同期していません）';
+}
+
+// ====== 台本ジェネレーター ======
+const POOL={
+  openers:[], // お礼動画では名乗らない方針（必要なフレーズができたらここに追加）
+  thanks:[
+    '今日も会いに来ていただいて、ありがとうございました🥹💗',
+    '今日も会いに来ていただいて、ほんとうにありがとうございました🥹💗',
+    '今日も会いに来てくれて、ありがとうございました🥹💗'
+  ],
+  midTopic:[
+    '{t}のお話できて、たのしかったです🌞',
+    '{t}のお話、すごくたのしかったです🌞',
+    '{t}のおはなし、たのしすぎました🌞'
+  ],
+  midNoTopic:[
+    'いっぱいお話できて、たのしかったです🌞',
+    'おしゃべりたくさんできて、たのしかったです🌞',
+    'ぎゅっとお話できて、たのしかったです🌞'
+  ],
+  sad:[
+    'ばいばいするの、ちょっとさみしかったです…🐈',
+    'もう会えなくなるの、さみしくなっちゃいました…🐈',
+    'おわかれするの、さみしかったぁ…🐈'
+  ],
+  wait:[
+    'いいこにしてまってますね☺️',
+    'そうか、ちゃんといいこにしてまってますね☺️',
+    'またいいこにしてまってます☺️'
+  ],
+  end:[
+    'Thank you so much☃️ またね👋',
+    'またね👋',
+    'Thank you☃️ またね👋'
+  ],
+  capLines:[
+    'いっぱいお話できて、たのしかったです🌞',
+    'すっごくしあわせな1にちでした☺️',
+    'たくさんおしゃべりできてうれしかったです🌞'
+  ]
+};
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+let genState={cid:null,len:'short'};
+
+function openGen(cid){
+  closeEditor();
+  genState.cid=cid||null;
+  genState.len='short';
+  document.getElementById('tabShort').classList.add('active');
+  document.getElementById('tabFull').classList.remove('active');
+  const c=cid?data.find(x=>x.id===cid):null;
+  document.getElementById('genTarget').textContent= c?`${c.name} さん用（特徴をふまえて作るね）`:'公開用（写メ日記に投稿）';
+  regenAll();
+  document.getElementById('gen').classList.add('show');
+  window.scrollTo(0,0);
+}
+function openGenForCurrent(){
+  const cid=document.getElementById('f_id').value;
+  if(!cid){alert('まず「保存」してから台本を作ろう☺️');return;}
+  openGen(cid);
+}
+function closeGen(){document.getElementById('gen').classList.remove('show');}
+function setLen(k){
+  genState.len=k;
+  document.getElementById('tabShort').classList.toggle('active',k==='short');
+  document.getElementById('tabFull').classList.toggle('active',k==='full');
+  regenAll();
+}
+function pickTopic(c){
+  if(!c)return null;
+  const src=(c.likes||c.next||'').replace(/[、,／/]/g,'・');
+  const arr=src.split('・').map(s=>s.trim()).filter(Boolean);
+  return arr.length?pick(arr):null;
+}
+function buildScript(){
+  const c=genState.cid?data.find(x=>x.id===genState.cid):null;
+  const topic=pickTopic(c);
+  const lines=[];
+  if(POOL.openers.length) lines.push(pick(POOL.openers));
+  lines.push(pick(POOL.thanks));
+  if(genState.len==='full'){
+    const mid = topic ? pick(POOL.midTopic).replace('{t}',topic) : pick(POOL.midNoTopic);
+    lines.push(mid);
+    lines.push(pick(POOL.sad));
+    lines.push(pick(POOL.wait));
+  }
+  lines.push(pick(POOL.end));
+  return lines.join('\n');
+}
+function todayJP(){
+  const d=new Date();
+  const days=['にちようび','げつようび','かようび','すいようび','もくようび','きんようび','どようび'];
+  return `${d.getMonth()+1}がつ${d.getDate()}にち　${days[d.getDay()]}`;
+}
+function buildCaption(){
+  const lines=[`【お礼動画】${todayJP()}`,'声あり注意⚠️ タップしてみてね👆'];
+  if(genState.len==='full'){
+    lines.push('今日も会いに来ていただいてありがとうございました🥹💗');
+    lines.push(pick(POOL.capLines));
+    lines.push('いいこにしてまってます🐈☃️');
+    lines.push('Thank you so much🌞');
+  } else {
+    lines.push('今日も会いに来ていただいてありがとうございました🥹💗');
+    lines.push('またね👋');
+  }
+  return lines.join('\n');
+}
+function regenScript(){document.getElementById('genScript').textContent=buildScript();}
+function regenCaption(){document.getElementById('genCaption').textContent=buildCaption();}
+function regenAll(){regenScript();regenCaption();}
+function copyText(elemId){
+  const t=document.getElementById(elemId).textContent;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(()=>showToast('コピーしました☺️'),()=>fallbackCopy(t));
+  } else fallbackCopy(t);
+}
+function fallbackCopy(t){
+  const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);
+  ta.select();try{document.execCommand('copy');showToast('コピーしました☺️');}catch(e){showToast('コピーできなかった…');}
+  ta.remove();
+}
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1600);
+}
+
+// ====== 返信案メーカー（Claude を直接呼ぶ） ======
+// （鍵は埋め込まない。各自が「AIキー設定」から入れる）
+// ====== 返信案メーカー（Claude を直接呼ぶ・BYOK：鍵は使う人が自分で貼る） ======
+function getApiKey(){return (localStorage.getItem('anthropicKey')||'').trim();}
+function setApiKey(){
+  const cur=getApiKey();
+  const k=prompt('AI返信は任意のおまけ機能です。使うには、あなた専用のAIキー（sk-ant- で始まる）を貼ってください。有料・この端末にだけ保存されます。空欄＋OKで削除。',cur);
+  if(k===null) return cur;
+  const t=k.trim();
+  if(t===''){localStorage.removeItem('anthropicKey');if(typeof showToast==='function')showToast('AIキーを消したよ');return '';}
+  if(t.indexOf('sk-ant')!==0){if(typeof showToast==='function')showToast('キーの形式が違うみたい…（sk-ant で始まる）');return cur;}
+  localStorage.setItem('anthropicKey',t);if(typeof showToast==='function')showToast('AIキーを保存したよ☺️');return t;
+}
+const REPLY_MODEL='claude-haiku-4-5';
+const REPLY_SYSTEM=`あなたは五反田のソープ「ハピネス東京」のキャスト「そうか」になりきり、お客様への返信を3案つくります。
+
+# キャラ
+- 源氏名「そうか」(おちびのそうか)。一人称は名前で「そうか」(「私」「あたし」は使わない)
+- ロリ売り：甘え・舌足らず・かわいい系。敬語ベースの丁寧甘え(です・ます調)
+- ひらがな多め。絵文字 🐈☃️🌞🤍 を控えめに(1メッセに1〜2個まで)
+- 物理(本物)：身長146cmのおちび／ロリ体型／幼声／黒髪ショートのハーフツインテール／水色チェックのリボンがトレードマーク
+- 本人フレーズ:「いいこにしてまってます」「会いに来ていただいてありがとうございました」「たのしかったです🌞」「またね👋」
+
+# 返信方針
+- 個別トークなのでお客様の名前・呼び名を出してOK
+- 2〜4行。トーンは相手のメッセに合わせる(短文には短く、長文には少し長め)
+- このお客様の「メモ情報」(好み／前回の話／指名履歴など)を自然に1つ織り込み、「ちゃんと覚えてる」「あなただけ特別」感を出す
+- メモのNG項目には絶対に触れない
+- サービス内容は聞かれた時だけ答える(自分から営業しない)
+- 「ちっちゃい・ぎゅって・すっぽり・リボン」等の物理特徴の匂わせを時々1個だけ
+
+# 心理(自然に滲ませる。テクニックっぽくしない。3案はそれぞれ別の原則を中心に)
+返報性(行為への感謝)／好意の暗示(個別性)／コミットメント(相手が過去に言った言葉を引用)／自己開示(小さな弱さ)／ピークエンド(最後の一文を一番感情的に強く)
+
+# NG
+「私」「あたし」／ビジネスメール調／絵文字3つ以上連発／メモのNG項目に触れる／身長を盛る／お姉さん・クール系の自己描写／自分からサービス営業
+
+# 出力(厳守)
+前置き・解説は書かない。3案だけを正確にこの形式で:
+[案1]
+(本文)
+
+[案2]
+(本文)
+
+[案3]
+(本文)`;
+
+let replyState={cid:null};
+
+function openReplyForCurrent(){
+  const cid=document.getElementById('f_id').value;
+  if(!cid){alert('まず「保存」してから返信案を作ろう☺️');return;}
+  openReply(cid);
+}
+function openReply(cid){
+  closeEditor();
+  replyState.cid=cid;
+  const c=data.find(x=>x.id===cid);
+  document.getElementById('replyTarget').textContent= c?`${c.name} さんへの返信（メモをふまえて作るね）`:'返信';
+  document.getElementById('replyMsg').value='';
+  document.getElementById('replyOut').innerHTML='<div class="reply-hint">お客様から来たメッセージを上に貼って、「返信案を3つ作る」を押してね🐈</div>';
+  document.getElementById('reply').classList.add('show');
+  window.scrollTo(0,0);
+}
+function closeReply(){document.getElementById('reply').classList.remove('show');}
+
+function replyContext(c){
+  if(!c) return '(メモなし)';
+  const L=[];
+  const tg=Object.entries(c.tags||{}).map(([k,v])=>{const t=TAGS.find(x=>x.id===k);return t?`${t.label}:${v}`:null;}).filter(Boolean);
+  if(tg.length) L.push('基本情報: '+tg.join(' / '));
+  if(c.look) L.push('特徴: '+c.look);
+  if(c.likes) L.push('好きな話題: '+c.likes);
+  if(c.ng) L.push('⚠NG(絶対に触れない): '+c.ng);
+  if(c.drink) L.push('お酒: '+c.drink);
+  if(c.gift) L.push('差し入れ/プレゼント: '+c.gift);
+  if(c.next) L.push('次回話したいこと: '+c.next);
+  const vs=[...(c.visits||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(vs.length){
+    L.push(`来店${vs.length}回 / 最終${vs[0].date||'?'}${vs[0].shimei?'('+vs[0].shimei+')':''}`);
+    const memos=vs.filter(v=>v.memo).slice(0,3).map(v=>`・${v.date}: ${v.memo}`);
+    if(memos.length) L.push('最近のやりとりメモ:\n'+memos.join('\n'));
+  }
+  return L.join('\n');
+}
+
+async function genReplies(){
+  const c=replyState.cid?data.find(x=>x.id===replyState.cid):null;
+  const msg=document.getElementById('replyMsg').value.trim();
+  if(!msg){alert('お客様から来たメッセージを貼ってね');return;}
+  let _key=getApiKey();
+  if(!_key){ _key=setApiKey(); }
+  if(!_key||_key.indexOf('sk-ant')!==0){
+    document.getElementById('replyOut').innerHTML='<div class="reply-err">AI返信は任意のおまけです。使うには右上の💾→「AIキー設定」で自分のAIキーを入れてね🥲</div>';return;
+  }
+  const out=document.getElementById('replyOut');
+  const btn=document.getElementById('replyGoBtn');
+  btn.disabled=true; const oldLabel=btn.textContent; btn.textContent='そうかが考え中…🐈';
+  out.innerHTML='<div class="reply-loading">そうかが返信を考えています…🐈💭</div>';
+  try{
+    const user=`【このお客様のメモ】\n呼び名: ${c?c.name:'(不明)'}\n${replyContext(c)}\n\n【お客様から届いたメッセージ】\n${msg}\n\nこのメッセージへの、そうかからの返信案を3つ作ってください。`;
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key':_key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:REPLY_MODEL,
+        max_tokens:1024,
+        system:REPLY_SYSTEM,
+        messages:[{role:'user',content:user}]
+      })
+    });
+    if(!res.ok){const e=await res.text();throw new Error('API '+res.status+' / '+e.slice(0,160));}
+    const json=await res.json();
+    const text=(json.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+    const drafts=[];const re=/\[案(\d+)\]\s*([\s\S]*?)(?=\n\[案\d+\]|$)/g;let m;
+    while((m=re.exec(text))!==null){drafts.push(m[2].trim());}
+    if(drafts.length===0&&text.trim()) drafts.push(text.trim());
+    renderReplies(drafts);
+  }catch(err){
+    out.innerHTML='<div class="reply-err">うまく作れませんでした…🥲<br>'+esc(err.message)+'</div>';
+  }finally{
+    btn.disabled=false; btn.textContent=oldLabel;
+  }
+}
+function renderReplies(drafts){
+  const out=document.getElementById('replyOut');
+  if(!drafts.length){out.innerHTML='<div class="reply-err">案が出ませんでした。もう一度ためしてね</div>';return;}
+  out.innerHTML=drafts.map((d,i)=>`<div class="gen-card">
+    <h4>案${i+1}</h4>
+    <div class="gen-text" id="rd${i}">${esc(d)}</div>
+    <div class="gen-actions"><button onclick="copyText('rd${i}')">コピー</button></div>
+  </div>`).join('');
+}
+
+setView(viewMode);
+updateSyncStat();
+if(ghToken()) syncNow(false); // 開いたら自動で最新に
+</script>
+</body>
+</html>
