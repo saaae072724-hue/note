@@ -219,8 +219,10 @@
       <input id="f_name" placeholder="例：ヒロ君">
     </div>
 
-    <div class="section-title">🏷️ 基本情報（タップで選択／もう一度タップで解除）</div>
-    <div class="taggroup" id="tagbox"></div>
+    <div class="field">
+      <label>備考（自由メモ・なんでも）</label>
+      <textarea id="f_note" placeholder="ここに自由にメモ"></textarea>
+    </div>
 
     <div class="field">
       <label>来店記録（日付＋指名方法＋メモを毎回残す）</label>
@@ -250,6 +252,9 @@
     <div class="field"><label>お酒の好み（具体的に）</label><input id="f_drink" placeholder="例：ハイボール"></div>
     <div class="field"><label>差し入れ・プレゼント（具体的に）</label><input id="f_gift" placeholder="例：限定タオル(5月)"></div>
     <div class="field"><label>次回の話題メモ</label><textarea id="f_next" placeholder="次に話したいこと"></textarea></div>
+
+    <div class="section-title">🏷️ 基本情報（タップで選択／もう一度タップで解除）</div>
+    <div class="taggroup" id="tagbox"></div>
 
     <button class="del" onclick="deleteCustomer()">このお客様を削除</button>
   </div>
@@ -519,6 +524,7 @@ function openEditor(cid){
   g('f_name').value=c?.name||'';
   g('f_look').value=c?.look||''; g('f_likes').value=c?.likes||''; g('f_ng').value=c?.ng||'';
   g('f_drink').value=c?.drink||''; g('f_gift').value=c?.gift||''; g('f_next').value=c?.next||'';
+  g('f_note').value=c?.note||'';
   curVisits=c?JSON.parse(JSON.stringify(c.visits||[])):[];
   curTags=c?JSON.parse(JSON.stringify(c.tags||{})):{};
   g('newdate').value=today(); g('newmemo').value=''; g('newshimei').value='';
@@ -577,7 +583,7 @@ function delVisit(i){curVisits.splice(i,1);renderVisits();}
 function saveCustomer(){
   const g=id=>document.getElementById(id).value;
   const cid=g('f_id');
-  const obj={id:cid||id(),name:g('f_name'),tags:curTags,
+  const obj={id:cid||id(),name:g('f_name'),note:g('f_note'),tags:curTags,
     look:g('f_look'),likes:g('f_likes'),ng:g('f_ng'),
     drink:g('f_drink'),gift:g('f_gift'),next:g('f_next'),visits:curVisits,
     updatedAt:Date.now()};
@@ -922,6 +928,7 @@ function replyContext(c){
   const L=[];
   const tg=Object.entries(c.tags||{}).map(([k,v])=>{const t=TAGS.find(x=>x.id===k);return t?`${t.label}:${v}`:null;}).filter(Boolean);
   if(tg.length) L.push('基本情報: '+tg.join(' / '));
+  if(c.note) L.push('備考: '+c.note);
   if(c.look) L.push('特徴: '+c.look);
   if(c.likes) L.push('好きな話題: '+c.likes);
   if(c.ng) L.push('⚠NG(絶対に触れない): '+c.ng);
