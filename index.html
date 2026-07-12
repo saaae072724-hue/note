@@ -327,7 +327,8 @@
 <div class="sheet" id="addsheet">
   <div class="inner">
     <h3>新しいお客様、どうやって追加する？</h3>
-    <button onclick="startSlip()">📷 伝票を撮って読み取る（AI）</button>
+    <button onclick="startSlip('camera')">📷 カメラで撮って読み取る（AI）</button>
+    <button onclick="startSlip('library')">🖼️ 写真から選んで読み取る（AI）</button>
     <button onclick="chooseManual()">✍️ 手で入力する</button>
     <button class="close" onclick="closeAddSheet()">閉じる</button>
   </div>
@@ -990,7 +991,7 @@ function renderReplies(drafts){
 function openAddChoice(){document.getElementById('addsheet').classList.add('show');}
 function closeAddSheet(){document.getElementById('addsheet').classList.remove('show');}
 function chooseManual(){closeAddSheet();openEditor();}
-function startSlip(){
+function startSlip(mode){
   const key=getApiKey();
   if(!key||key.indexOf('sk-ant')!==0){
     closeAddSheet();
@@ -998,6 +999,8 @@ function startSlip(){
     openEditor();return;
   }
   const inp=document.getElementById('slipFile');
+  if(mode==='camera') inp.setAttribute('capture','environment'); // カメラ起動
+  else inp.removeAttribute('capture');                           // 写真から選ぶ
   inp.value=''; inp.click();
 }
 function readAsDataURL(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});}
