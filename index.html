@@ -158,6 +158,11 @@
   .calv.net{background:#c9a2b4;} .calv.unk{background:#d8ccd1;color:#6b5c63;}
   .calmore{font-size:9px;color:var(--muted);padding-left:2px;}
   .calempty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px;}
+  /* 伝票読み取り中 */
+  .sliploading{position:fixed;inset:0;background:rgba(255,245,248,.95);z-index:80;
+    display:none;align-items:center;justify-content:center;text-align:center;
+    color:var(--rose-dark);font-weight:700;font-size:17px;line-height:1.9;padding:40px;}
+  .sliploading.show{display:flex;}
 </style>
 </head>
 <body>
@@ -197,7 +202,7 @@
   </div>
 </div>
 
-<button class="fab" onclick="openEditor()">＋ 新しいお客様</button>
+<button class="fab" onclick="openAddChoice()">＋ 新しいお客様</button>
 
 <!-- 編集画面 -->
 <div class="editor" id="editor">
@@ -317,6 +322,18 @@
     <button class="close" onclick="closeSheet()">閉じる</button>
   </div>
 </div>
+
+<!-- 新規追加のえらび方 -->
+<div class="sheet" id="addsheet">
+  <div class="inner">
+    <h3>新しいお客様、どうやって追加する？</h3>
+    <button onclick="startSlip()">📷 伝票を撮って読み取る（AI）</button>
+    <button onclick="chooseManual()">✍️ 手で入力する</button>
+    <button class="close" onclick="closeAddSheet()">閉じる</button>
+  </div>
+</div>
+<input type="file" id="slipFile" accept="image/*" capture="environment" style="display:none" onchange="handleSlip(event)">
+<div class="sliploading" id="slipLoading">📷 伝票を読み取っています…<br>ちょっと待ってね🐈💭</div>
 
 <div class="toast" id="toast"></div>
 
@@ -967,6 +984,73 @@ function renderReplies(drafts){
     <div class="gen-text" id="rd${i}">${esc(d)}</div>
     <div class="gen-actions"><button onclick="copyText('rd${i}')">コピー</button></div>
   </div>`).join('');
+}
+
+// ====== 📷 伝票を読み取って新規追加（AI vision） ======
+function openAddChoice(){document.getElementById('addsheet').classList.add('show');}
+function closeAddSheet(){document.getElementById('addsheet').classList.remove('show');}
+function chooseManual(){closeAddSheet();openEditor();}
+function startSlip(){
+  const key=getApiKey();
+  if(!key||key.indexOf('sk-ant')!==0){
+    closeAddSheet();
+    alert('伝票の読み取りにはAIキーが必要です。右上の💾→「AIキー設定」を入れてね。今回は手入力でどうぞ☺️');
+    openEditor();return;
+  }
+  const inp=document.getElementById('slipFile');
+  inp.value=''; inp.click();
+}
+function readAsDataURL(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});}
+function mapShimei(s){return SHIMEI.indexOf(s)>=0?s:'';}
+function parseSlipJSON(text){try{const m=text.match(/\{[\s\S]*\}/);return m?JSON.parse(m[0]):{};}catch(e){return {};}}
+function fillEditorFromSlip(o){
+  o=o||{};
+  if(o.name) document.getElementById('f_name').value=o.name;
+  const date=(o.date&&/^\d{4}-\d{2}-\d{2}$/.test(o.date))?o.date:today();
+  const sh=mapShimei(o.shimei);
+  if(o.name||o.date||o.shimei||o.memo){
+    curVisits.push({date:date,shimei:sh,memo:o.memo||''});
+    renderVisits();
+  }
+}
+async function handleSlip(e){
+  const f=e.target.files[0]; if(!f) return;
+  closeAddSheet();
+  const key=getApiKey();
+  const load=document.getElementById('slipLoading');
+  load.classList.add('show');
+  try{
+    const dataUrl=await readAsDataURL(f);
+    const [meta,b64]=dataUrl.split(',');
+    const mt=((meta||'').match(/data:(.*?);/)||[])[1]||'image/jpeg';
+    const prompt=`この画像は風俗店の「伝票」です。今日は${today()}です。書かれている情報を読み取り、次のJSONだけを返してください（前置き・説明・コードブロックは不要）。
+{
+ "name": "お客様の名前・呼び名・会員番号など（読み取れなければ空）",
+ "date": "来店日 YYYY-MM-DD（西暦。年が無ければ今年。読み取れなければ空）",
+ "shimei": "指名方法。次のどれかに最も近いものを1つ:本指名/ネット前日指名/ハピスク指名/ネット当日指名/ヒメネット/写真指名。分からなければ空",
+ "memo": "コース・時間・オプション・その他読み取れた情報を短く（読み取れなければ空）"
+}`;
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:REPLY_MODEL,max_tokens:600,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:mt,data:b64}},
+        {type:'text',text:prompt}
+      ]}]})
+    });
+    if(!res.ok){throw new Error('API '+res.status);}
+    const json=await res.json();
+    const text=(json.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('');
+    const obj=parseSlipJSON(text);
+    load.classList.remove('show');
+    openEditor();
+    fillEditorFromSlip(obj);
+    showToast('読み取ったよ！中身を確認して保存してね☺️');
+  }catch(err){
+    load.classList.remove('show');
+    openEditor();
+    showToast('うまく読み取れなかった…手入力でお願い🥲');
+  }
 }
 
 setView(viewMode);
