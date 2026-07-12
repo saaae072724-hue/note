@@ -650,15 +650,16 @@ async function pullRemote(){
   const gid=await ensureGist();
   const j=await (await ghFetch('https://api.github.com/gists/'+gid)).json();
   const f=j.files && j.files[GIST_FILE];
-  if(!f) return {customers:[],deletedIds:{}};
+  if(!f) return {customers:[],deletedIds:{},apiKey:''};
   let content=f.content;
   if(f.truncated && f.raw_url){content=await (await fetch(f.raw_url)).text();}
-  try{const o=JSON.parse(content);return {customers:o.customers||[],deletedIds:o.deletedIds||{}};}
-  catch(e){return {customers:[],deletedIds:{}};}
+  try{const o=JSON.parse(content);return {customers:o.customers||[],deletedIds:o.deletedIds||{},apiKey:o.apiKey||''};}
+  catch(e){return {customers:[],deletedIds:{},apiKey:''};}
 }
 async function pushRemote(customers,deletedIds){
   const gid=await ensureGist();
-  const body={files:{[GIST_FILE]:{content:JSON.stringify({customers,deletedIds,savedAt:Date.now()},null,2)}}};
+  // AIキーも一緒に保存（この端末が消えても他端末/再訪時に自動で戻る）
+  const body={files:{[GIST_FILE]:{content:JSON.stringify({customers,deletedIds,apiKey:getApiKey(),savedAt:Date.now()},null,2)}}};
   await ghFetch('https://api.github.com/gists/'+gid,{method:'PATCH',body:JSON.stringify(body)});
 }
 // 端末をまたいで「新しい方を残す」マージ（更新時刻で判定・削除も反映）
@@ -687,6 +688,8 @@ async function syncNow(manual){
   syncing=true; if(manual) showToast('同期中…☁️');
   try{
     const remote=await pullRemote();
+    // この端末にAIキーが無くて同期先にあれば、自動で戻す
+    if(remote.apiKey && !getApiKey()){ localStorage.setItem('anthropicKey',remote.apiKey); }
     const merged=mergeCustomers(data,remote.customers,loadDeleted(),remote.deletedIds);
     data=merged.customers; saveLocal(); saveDeleted(merged.deletedIds);
     await pushRemote(merged.customers,merged.deletedIds);
